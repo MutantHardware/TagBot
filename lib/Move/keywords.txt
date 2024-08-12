@@ -1,0 +1,25 @@
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+Move      KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+forward   KEYWORD2
+backward  KEYWORD2
+left      KEYWORD2
+right     KEYWORD2
+stop      KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+AIN1      LITERAL1 
+AIN2      LITERAL1
+PWMA      LITERAL1
+BIN1      LITERAL1 
+BIN2      LITERAL1
+PWMB      LITERAL1

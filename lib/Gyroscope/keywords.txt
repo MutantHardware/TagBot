@@ -1,0 +1,29 @@
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+Gyro      KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+getTemp      KEYWORD2
+getAccX      KEYWORD2
+getAccY      KEYWORD2
+getAccZ      KEYWORD2
+getGyroX     KEYWORD2
+getGyroY     KEYWORD2
+getGyroZ     KEYWORD2
+getAccAngleX KEYWORD2
+getAccAngleY KEYWORD2
+getAngleX    KEYWORD2
+getAngleY    KEYWORD2
+getAngleZ    KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+I2C_SDA   LITERAL1 
+I2C_SCL   LITERAL1
