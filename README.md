@@ -12,12 +12,12 @@ To program the robot, I used [Arduino](https://www.arduino.cc/en/software) IDE v
 - [BluetoothSerial](https://github.com/hen1227/bluetooth-serial) version 2.0.11 to communicate with the APP via Bluetooth Serial communication;
 
 ### Custom libraries:
-- "**Move**", built to control the robot's movements;
-- "**Gyroscope**", forked from [MPU6050_light](https://github.com/rfetick/MPU6050_light) to measure tilt angle;
-- "**Switch**", designed to detect the position or changes of the switch;
-- **Electromagnet**", created to control the state of the robot's electromagnet;
-- "**IRArray**", invented to be an easy way to detect the states of each IR sensor in the IR Array.
-- **Sequence**", developed to control the sequence of movements and the states of the electromagnet;
+- [Move](https://github.com/MutantHardware/TagBot/tree/main/lib/Move), built to control the robot's movements;
+- [Gyroscope](https://github.com/MutantHardware/TagBot/tree/main/lib/Gyroscope), forked from [MPU6050_light](https://github.com/rfetick/MPU6050_light) to measure tilt angle;
+- [Switch](https://github.com/MutantHardware/TagBot/tree/main/lib/Switch), designed to detect the position or changes of the switch;
+- [Electromagnet](https://github.com/MutantHardware/TagBot/tree/main/lib/Electromagnet), created to control the state of the robot's electromagnet;
+- [IRArray](https://github.com/MutantHardware/TagBot/tree/main/lib/IRArray), invented to be an easy way to detect the states of each IR sensor in the IR Array.
+- [Sequence](https://github.com/MutantHardware/TagBot/tree/main/lib/Sequence), developed to control the sequence of movements and the states of the electromagnet;
   
 :warning: **Watchout**: Make sure to update the old functions if you're using newer versions of the libraries!
 
