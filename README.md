@@ -119,7 +119,7 @@ To cite this project in publications, add this snippet to your BibTex file:
   year = {2024},
   publisher = {GitHub},
   note = {GitHub Repository},
-  howpublished = {\url{https://github.com/MutantHardware/Temp/}},
+  howpublished = {\url{https://github.com/MutantHardware/TagBot/}},
 }
 ```
 
