@@ -48,9 +48,9 @@ The componentes used to make the electrical part of the robot was:
 
 The basics of the wiring can be seen below. 
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/ad9b755b-9abb-41f3-8543-05420f893239" alt="tagBot" style="width:60%; height:auto;" />
-</p>
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/ad9b755b-9abb-41f3-8543-05420f893239" alt="tagBot" width="60%" />
+</div>
 
 ## Obstacle Avoidance
 The obstacle avoidance logic uses the ultrasonic sensor together with the CLP in the front of the robot to detect if robot will crash or crashed. The fluxogram explaining the logic can be seen below.
