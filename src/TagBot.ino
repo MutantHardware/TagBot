@@ -1,3 +1,29 @@
+/*
+MIT License
+
+Copyright (c) 2024 João V. M. Grando
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+GitHub Repository: https://github.com/MutantHardware/TagBot
+*/
+
 // Including Libraries
 #include "Move.h"
 #include "Pinout.h"
@@ -10,87 +36,112 @@
 #include "Electromagnet.h"
 #include "BluetoothSerial.h"
 
-// Servo Variables
-int angle = 0;
+// Time variables and constants
+namespace Time {
+  // Electromagnet Time 
+  long emg = 0; // Electromagnet Time 
+  unsigned long emgLast = 0; // Last Electromagnet Time
+  const int dEmg = 100; // Default Electromagnet Time
+  
+  // Movements Time
+  long mov = 0; // Movement Time
+  unsigned long movLast = 0; // Last Movement Time
+  const int dFwd = 2500;  // Default Forward Time
+  const int dBwd = 300;  // Default Backward Time
+  const int dClk = 1000; // Default Clockwise Time
+  const int dCcw = 1000; // Default Counterclockwise Time
+  const int dStp = 100;  // Default Stop Time
+  
+  // Control Time
+  const int ctl = 10; // Time delay between control actions
 
-// Ultrasonic Sensor Variables
-bool US[3] = {false,false,false};
+  // Debounce Time
+  const int dbc = 50; 
+  
+  // Servo Time
+  const int srv = 500; 
 
-// Rotation variables
-bool isAngle = false;
-bool rotated = false;
+  // Ultrasonic Sensor Time
+  const int us = 100;
+}
 
-// Time constants
-const int fTime = 2500; // Forward 
-const int bTime = 2500; // Backward 
-const int cTime = 100;  // Clockwise 
-const int wTime = 100;  // Counterclockwise
-const int sTime = 100;  // Stop
+// PWM variables and constants
+namespace PWM {
+  // Movements PWM
+  const int dFwdR = 255; // Default Forward Right Motor PWM
+  const int dFwdL = 255; // Default Forward Left Motor PWM
+  const int dBwdR = 255; // Default Backward Right Motor PWM
+  const int dBwdL = 255; // Default Backward Left Motor PWM
+  const int dClwR = 255; // Default Clockwise Right Motor PWM
+  const int dClwL = 255; // Default Clockwise Left Motor PWM
+  const int dCcwR = 255; // Default Counterclockwise Right Motor PWM
+  const int dCcwL = 255; // Default Counterclockwise Left Motor PWM
 
-// Time Variables
-long mTime = 0; // Movement Time
-long eTime = 0; // Electromagnet Time
-unsigned long mLastTime = 0;
-unsigned long eLastTime = 0;
-const int maxRow = 32;
+  // Control PWM (Joystick and Gyroscope)
+  const int ctlMin = 200; // Control Minimum Motor PWM
+  const int ctlMax = 255; // Control Maximum Motor PWM
+  const int ctlThd = 40;  // Control Threshold Motor PWM
+  const int ctlDfR = 240; // Control Default Right Motor PWM
+  const int ctlDfL = 240; // Control Default Left Motor PWM
+}
 
-bool clear = false;
-bool execute = false;
-bool function = false;
-const int minDistance = 8;
+// Ultrasonic Sensor Variables, range 2~400 cm
+namespace Ultrasonic {
+  constexpr int minDistF = 8;  // Minimum frontal distance, in cm
+  int minDistS = 2 * minDistF; // Minimum side distance, in cm
+  constexpr int maxDist = 50;  // Maximum sensor distance, in cm
+  bool US[3] = {false, false, false}; // Ultrasonic sensor states
+}
 
-// PID variables and constants
-int pwm, error;
-
-// PWM constants (A -> Right and B -> Left)
-const int minPWM = 200;
-const int maxPWM = 255;
-const int defaultPWMA = 240;
-const int defaultPWMB = 235;
-
-// Forward PWMs
-const int fPWMA = 255;
-const int fPWMB = 255;
-
-// Backward PWMs
-const int bPWMA = 255;
-const int bPWMB = 255;
-
-// Clocwise PWMs
-const int cPWMA = 255;
-const int cPWMB = 255;
-
-// Counterclockwise PWMs
-const int wPWMA = 255;
-const int wPWMB = 255;
+// Angle variables and constants
+namespace Angle {
+  // Servo 
+  int angle; // Variable to store servo angle
+  const int mid = 90; // Middle Angle Servo
+  const int rot = 45; // Angle servo will rotate from middle angle
+  
+  // Gyroscope
+  bool isAngle = false; // Variable to check if is angle or not
+  bool rotated = false; // Variable to check if robot finished rotation
+  const int error = 2;  // Angle error
+}
 
 // Bluetooth variables and constants
-int var[4];
-bool received;
-bool clean = false;
-bool bluetooth = false;
-boolean newData = false;
-const byte numChars = 32;
-char rcvdChars[numChars];
-char tempChars[numChars]; 
+namespace Bluetooth {
+  int var[4]; 
+  boolean newData = false; 
+  const byte numChars = 32; 
+  char rcvdChars[numChars]; 
+  char tempChars[numChars]; 
+  bool received;
+  bool connected = false;
+}
 
-// Sequence Variables
-int mLength = 0;
-int eLength = 0;
-int sLength = 0;
-bool mSeq = false;
-bool eSeq = false;
-bool mIsRunning = false;
-bool eIsRunning = false;      
+// Sequence variables and constants
+namespace Seq {
+  // Sequences Length
+  int movLen = 0; // Movement Sequence Length
+  int emgLen = 0; // Electromagnet Sequence Length
+  int seqLen = 0; // Sequence Length
+  const int maxLen = 32; // Sequence Maximum Length
 
-// Switch Constants
+  // Sequences states
+  bool mov = false; // Movements Sequence
+  bool emg = false; // Electromagnet Sequence
+  bool clr = false; // Clear Sequence
+  bool exe = false; // Execute Sequence
+  bool movActive = false; // Movements Execution
+  bool emgActive = false; // Electromagnet Execution
+}
+
+// Switch variables
 bool SW[3] = {false,false,false};
-
-// Creating Gyro Object
-Gyroscope Gyro;
 
 // Creating Servo Object
 Servo Servo; 
+
+// Creating Gyro Object
+Gyroscope Gyro;
 
 // Creating I2C Object
 TwoWire I2C = TwoWire(0);
@@ -99,19 +150,19 @@ TwoWire I2C = TwoWire(0);
 BluetoothSerial SerialBT;
 
 // Creating Movements object
-Sequence mSequence(maxRow);
+Sequence MovSeq(Seq::maxLen);
 
-// Creating Magnet object
-Sequence eSequence(maxRow);
+// Creating Electromagnet object
+Sequence EmgSeq(Seq::maxLen);
 
 // Creating Switch Object
-Switch Switch({SW0,SW1},50);
+Switch Switch({SW0,SW1},Time::dbc);
 
 // Creating Electromagnet Object
 Electromagnet Electromagnet(EMG);
 
 // Creating UltrasonicSensor object
-NewPing UltrasonicSensor(TRIG,ECHO,50);
+NewPing UltrasonicSensor(TRIG,ECHO,Ultrasonic::maxDist);
 
 // Creating Move object
 Move Move(AIN1,AIN2,PWMA,BIN1,BIN2,PWMB);
@@ -145,10 +196,7 @@ void setup() {
   Gyro.calcOffsets(true,true); 
   Gyro.setFilterGyroCoef(0.95);
 
-   //Allow allocation of all timers
-  // ESP32PWM::allocateTimer(0);
-  // ESP32PWM::allocateTimer(1);
-  // ESP32PWM::allocateTimer(2);
+  // Allocate Timer
   ESP32PWM::allocateTimer(3);
 
   // Initialize Servo
@@ -156,8 +204,9 @@ void setup() {
   Servo.attach(SRV, 500, 2400); 
   
   // Move servo to the middle position
-  Servo.write(90);
-  delay(500);
+  Servo.write(Angle::mid);
+
+  wait(Time::srv);
 
   Serial.println("Finished!");
 }
@@ -167,13 +216,13 @@ void loop() {
   Switch.position(SW);
   
   // Bluetooth Modes
-  if (bluetooth) {
+  if (Bluetooth::connected) {
     // Call tagBot Function if connected to bluetooth
     tagBot(); 
 
     // Execute Sequence
-    if (execute) {
-      executeSequence();
+    if (Seq::exe) {
+      executEmgSeq();
     } 
   }
   // Switch Modes
@@ -193,200 +242,206 @@ void loop() {
   switchInterrupt();
 
   // Clear Sequences
-  if (clear) {
-    mSequence.deleteAll();
-    eSequence.deleteAll();
-    clear = !clear;
+  if (Seq::clr) {
+    MovSeq.deleteAll();
+    EmgSeq.deleteAll();
+    Seq::clr = !Seq::clr;
   }
 }
 
+// Function to control obstacle avoidance with servo
 void obstacleAvoidanceServo() {
   // Verify middle position crash
-  US[0] = crashInterrupt(minDistance);
+  Ultrasonic::US[0] = crashInterrupt(Ultrasonic::minDistF);
   
   // If Robot will crash
-  if (US[0]) {
+  if (Ultrasonic::US[0]) {
     // Stop Robot
     Move.robotStop();
     Serial.println("R: ●");
 
     // Move Servo to the right position
-    Servo.write(180);
+    Angle::angle = Angle::mid + Angle::rot;
+    Servo.write(Angle::angle);
     Serial.println("S: →");
-    wait(500,false);
+    wait(Time::srv,false);
 
     // Verify right position crash
-    US[1] = crashInterrupt(minDistance);
+    Ultrasonic::US[1] = crashInterrupt(Ultrasonic::minDistS);
+    wait(Time::us,false);
 
-    // Move Servo to the left position
-    Servo.write(0);
+    // Move Servo to the left position 
+    Angle::angle = Angle::mid - Angle::rot;
+    Servo.write(Angle::angle);
     Serial.println("S: ←");
-    wait(500,false);
+    wait(Time::srv,false);
 
     // Verify left position crash
-    US[2] = crashInterrupt(minDistance);
+    Ultrasonic::US[2] = crashInterrupt(Ultrasonic::minDistS);
+    wait(Time::us,false);
 
     // Move Servo to the middle position
-    Servo.write(90);
+    Servo.write(Angle::mid);
     Serial.println("S: ↑"); 
-    wait(500,false);
+    wait(Time::srv,false);
  
-    // Update robot PWM
-    Move.robotPWM(defaultPWMA,defaultPWMB);
-
     // Detected obstacle in the right and in the left
-    if (US[1] && US[2]) {
+    if (Ultrasonic::US[1] && Ultrasonic::US[2]) {
       // Move robot backward
       Serial.println("R: ↓");
       Move.robotBackward();
+      Move.robotPWM(PWM::dFwdR,PWM::dFwdL);
       
-      wait(1000,false); 
+      wait(Time::dBwd,false); 
 
       // Rotate robot clockwise (could be counterclockwise as well)
       Serial.println("R: ↻");
       Move.robotRight();
+      Move.robotPWM(PWM::dClwR,PWM::dClwL);
 
-      wait(1000,false);
+      wait(Time::dClk,false);
     }
     // Detected obstacle in the right 
-    else if (US[1] && !US[2]) {
+    else if (Ultrasonic::US[1] && !Ultrasonic::US[2]) {
       // Rotate robot counterclockwise
       Serial.println("R: ↺"); 
       Move.robotLeft();
+      Move.robotPWM(PWM::dCcwR,PWM::dCcwL);
 
-      wait(1000,false);
+      wait(Time::dCcw,false);
     }
     // Detected obstacle in the left
-    else if (!US[1] && US[2]) {
+    else if (!Ultrasonic::US[1] && Ultrasonic::US[2]) {
       // Rotate robot clockwise
       Serial.println("R: ↻");
       Move.robotRight();
+      Move.robotPWM(PWM::dClwR,PWM::dClwL);
 
-      wait(1000,false);
+      wait(Time::dClk,false);
     }
     else {
       // Rotate robot clockwise (could be counterclockwise as well)
       Serial.println("R: ↻");
       Move.robotRight();
+      Move.robotPWM(PWM::dClwR,PWM::dClwL);
 
-      wait(1000,false);
+      wait(Time::dCcw,false);
     }
   }
   else {
     // Move Robot Forward
     Move.robotForward();
-    Move.robotPWM(defaultPWMA,defaultPWMB);
+    Move.robotPWM(PWM::dFwdR,PWM::dFwdL);
     Serial.println("R: ↑");
   }
 }
 
-// Ultrasonic Mode Without Servo Function
+// Function to control obstacle avoidance without servo
 void obstacleAvoidance() {
   // Verify crash Interruption
-  while (crashInterrupt(minDistance)){
+  while (crashInterrupt(Ultrasonic::minDistF)){
     // Stop Robot
     Move.robotStop();
     Serial.println("●");
 
-    wait(100,false);
+    wait(Time::dStp,false);
 
     // Move robot backward
     Move.robotBackward();
-    Move.robotPWM(defaultPWMA,defaultPWMB);
+    Move.robotPWM(PWM::dBwdR,PWM::dBwdL);
     Serial.println("↓");
 
-    wait(300,false);
+    wait(Time::dBwd,false);
     
     // Rotate robot clockwise
     Serial.println("↻");
     Move.robotRight();
-    Move.robotPWM(defaultPWMA,defaultPWMB);
+    Move.robotPWM(PWM::dClwR,PWM::dClwL);
     
-    //wait(500,true);
-    wait(1000,true);
+    wait(Time::dClk,true);
   }
   // Move Robot Forward
   Move.robotForward();
   Serial.println("↑");
-  Move.robotPWM(defaultPWMA,defaultPWMB);
+  Move.robotPWM(PWM::dFwdR,PWM::dFwdL);
 }          
 
-// Function to control robot through tagBot app
+// Function to control the robot through TagBot app
 void tagBot() {
   // Receive and parse bluetooth serial data
   receive('<','>'); 
 
   // Execute actions, based in the received values
-  if (received) {
+  if (Bluetooth::received) {
     // Choose the sequence
-    mSeq = false;
-    eSeq = false;
-    switch(var[0]) {
+    Seq::mov = false;
+    Seq::emg = false;
+    switch(Bluetooth::var[0]) {
       case 1:
-        mSeq = !mSeq;
+        Seq::mov = !Seq::mov;
         break;
       case 2:
-        eSeq = !eSeq;
+        Seq::emg = !Seq::emg;
         break;
       case 3:
-        mSeq = !mSeq;
-        eSeq = !eSeq;
+        Seq::mov = !Seq::mov;
+        Seq::emg = !Seq::emg;
         break;
       default:
         break;
     }
 
-    Serial.println(mSeq ? " Movements Sequence" : "");
-    Serial.println(eSeq ? " Electromagnet Sequence" : "");
+    Serial.println(Seq::mov ? " Movements Sequence" : "");
+    Serial.println(Seq::emg ? " Electromagnet Sequence" : "");
 
     // Verify if is angle or not
-    var[2] == 6 ? isAngle = true : isAngle = false;
+    Bluetooth::var[2] == 6 ? Angle::isAngle = true : Angle::isAngle = false;
     
     // Choose the action
-    switch (var[1]) {
+    switch (Bluetooth::var[1]) {
       case 1:
         // Execute Function to control robot PWM
-        controlPWM(var[2],var[3],40,minPWM,maxPWM,10);
+        controlPWM(Bluetooth::var[2],Bluetooth::var[3],PWM::ctlThd,PWM::ctlMin,PWM::ctlMax,Time::ctl);
         break;
       case 2:
         // Execute Action Function 
-        controlAction(var[2],var[3]);
+        controlAction(Bluetooth::var[2],Bluetooth::var[3]);
         break;
       case 3:
         // Flag to execute Sequence
-        execute = true;
+        Seq::exe = true;
         break;
       case 4: 
         // Record Sequence Function 
         Serial.println("Recording...");
-        mSeq ? mSequence.record(var[2],var[3]) : void();
-        eSeq ? eSequence.record(var[2],var[3]) : void();
+        Seq::mov ? MovSeq.record(Bluetooth::var[2],Bluetooth::var[3]) : void();
+        Seq::emg ? EmgSeq.record(Bluetooth::var[2],Bluetooth::var[3]) : void();
         break;
       case 5:
         // Delete Last Element Function
         Serial.println("Deleting Last Element...");
-        mSeq ? mSequence.deleteLast() : void();
-        eSeq ? eSequence.deleteLast() : void();
+        Seq::mov ? MovSeq.deleteLast() : void();
+        Seq::emg ? EmgSeq.deleteLast() : void();
         break;
       case 6:
         // Clear Sequence function
         Serial.println("Cleaning...");
-        mSeq ? mSequence.deleteAll() : void();
-        eSeq ? eSequence.deleteAll() : void();
-        clear = false;
+        Seq::mov ? MovSeq.deleteAll() : void();
+        Seq::emg ? EmgSeq.deleteAll() : void();
+        Seq::clr = false;
         break;
       default:
         break;
     }
-    received = false;
+    Bluetooth::received = false;
   }
 }
 
-// Function to control robot with time
+// Function to control the PWM of the wheels
 void controlPWM(int pwmA, int pwmB, int threshold, int minPWM, int maxPWM, int time) {
   
-  int DutyCycleA = defaultPWMA;
-  int DutyCycleB = defaultPWMB;
+  int DutyCycleA = PWM::ctlDfR;
+  int DutyCycleB = PWM::ctlDfL;
   
   // Wait a bit
   unsigned long lastTime = 0;
@@ -396,7 +451,7 @@ void controlPWM(int pwmA, int pwmB, int threshold, int minPWM, int maxPWM, int t
     Switch.position(SW);
     
     // Stop Condition
-    if (pwmA == 0 && pwmB == 0 || SW[0] && crashInterrupt(minDistance) && pwmB > 0) {
+    if (pwmA == 0 && pwmB == 0 || SW[0] && crashInterrupt(Ultrasonic::minDistF) && pwmB > 0) {
       Serial.print("●");
       Move.robotStop();
       DutyCycleA = pwmA;
@@ -447,17 +502,17 @@ void controlPWM(int pwmA, int pwmB, int threshold, int minPWM, int maxPWM, int t
   Serial.println("x: " + String(DutyCycleA) + " y: " + String(DutyCycleB));
 }
 
-// Function to control robot action
+// Function to control robot actions
 void controlAction(int action, int value) {
   // Execute Movement action
-  if (mSeq) {
+  if (Seq::mov) {
     mControlAction(action,value);
-    if (!isAngle) {
+    if (!Angle::isAngle) {
       // Read Switch position
       Switch.position(SW);
 
       // Wait a bit 
-      wait(mTime,SW[0]);
+      wait(Time::mov,SW[0]);
 
       // Stop robot
       Move.robotStop();
@@ -466,11 +521,11 @@ void controlAction(int action, int value) {
   }
 
   // Execute Electromagnet action
-  if (eSeq) {
+  if (Seq::emg) {
     eControlAction(action,value);
 
     // Wait a bit 
-    wait(eTime,SW[0]);
+    wait(Time::emg,SW[0]);
 
     // Deactivate electromagnet
     Electromagnet.deactivate();
@@ -484,70 +539,70 @@ void mControlAction(int mAction, int mValue) {
   switch(mAction) {
     case 1:   
       // Make sure time != 0
-      mValue == 0 ? mTime = fTime : mTime = mValue;
+      mValue == 0 ? Time::mov = Time::dFwd : Time::mov = mValue;
 
       // Move robot forward
       Move.robotForward();
-      Serial.println("↑ " + String(mTime));
+      Serial.println("↑ " + String(Time::mov));
 
       // Set robot pwm
-      Move.robotPWM(fPWMA,fPWMB);
+      Move.robotPWM(PWM::dFwdR,PWM::dFwdL);
       break;
     case 2:    
       // Make sure time != 0
-      mValue == 0 ? mTime = bTime : mTime = mValue;
+      mValue == 0 ? Time::mov = Time::dBwd : Time::mov = mValue;
 
       // Move robot backward
       Move.robotBackward();
-      Serial.println("↓ " + String(mTime)); 
+      Serial.println("↓ " + String(Time::mov)); 
 
       // Set robot pwm
-      Move.robotPWM(bPWMA,bPWMB);
+      Move.robotPWM(PWM::dBwdR,PWM::dBwdL);
       break;
     case 3:
       // Make sure time != 0
-      mValue == 0 ? mTime = cTime : mTime = mValue;
+      mValue == 0 ? Time::mov = Time::dClk : Time::mov = mValue;
 
       // Rotate robot clockwise
       Move.robotRight();
-      Serial.println("↻ " + String(mTime)); 
+      Serial.println("↻ " + String(Time::mov)); 
 
       // Set robot pwm
-      Move.robotPWM(cPWMA,cPWMB);
+      Move.robotPWM(PWM::dClwR,PWM::dClwL);
       break;
     case 4: 
        // Make sure time != 0
-      mValue == 0 ? mTime = wTime : mTime = mValue;
+      mValue == 0 ? Time::mov = Time::dCcw : Time::mov = mValue;
 
       // Rotate robot counterclockwise
       Move.robotLeft();
-      Serial.println("↺ " + String(mTime)); 
+      Serial.println("↺ " + String(Time::mov)); 
 
       // Set robot pwm
-      Move.robotPWM(wPWMA,wPWMB);
+      Move.robotPWM(PWM::dCcwR,PWM::dCcwL);
       break;  
     case 5:
       // Make sure time != 0
-      mValue == 0 ? mTime = sTime : mTime = mValue;
+      mValue == 0 ? Time::mov = Time::dStp : Time::mov = mValue;
 
       // Stop robot
       Move.robotStop();
-      Serial.println("● " + String(mTime));
+      Serial.println("● " + String(Time::mov));
       break;
      case 6:
       // Rotate robot with Angle
       Serial.println("Rotate " + String(mValue) + "°");
-      rotate(mValue, 2, 200, 200);
+      rotate(mValue, Angle::error);
       break;
     default:
       break;
   }
 }
 
-// Function to control electromagnet states
+// Function to control electromagnet action
 void eControlAction(int eAction, int electromagnetTime) {
   // Make sure electromagnet time != 0
-  electromagnetTime == 0 ? eTime = fTime : eTime = electromagnetTime;
+  electromagnetTime == 0 ? Time::emg = Time::dEmg : Time::emg = electromagnetTime;
   
   // Choose electromagnet state
   if (eAction == 7) {
@@ -560,64 +615,64 @@ void eControlAction(int eAction, int electromagnetTime) {
   }
 }
 
-// Function to execute Sequence
-void executeSequence() {
+// Function to execute the electromagnet sequence
+void executEmgSeq() {
   // Calculate sequences length
-  mLength = mSequence.getLength();
-  eLength = eSequence.getLength();
-  sLength = max(mLength, eLength);
+  Seq::movLen = MovSeq.getLength();
+  Seq::emgLen = EmgSeq.getLength();
+  Seq::seqLen = max(Seq::movLen, Seq::emgLen);
   
-  Serial.println("M Length: " + String(mLength));
-  Serial.println("E Length: " + String(eLength));
-  Serial.println("S Length: " + String(sLength));
+  Serial.println("M Length: " + String(Seq::movLen));
+  Serial.println("E Length: " + String(Seq::emgLen));
+  Serial.println("S Length: " + String(Seq::seqLen));
 
   // Execute sequences
   Serial.println("Started!");
   int m = 0, e = 0, s = 0;
-  while (s < sLength) {
+  while (s < Seq::seqLen) {
     // Only execute if movement is defined and isn't empty
-    if (mSeq && mLength != 0) {
+    if (Seq::mov && Seq::movLen != 0) {
       // Movement Actual Time
       unsigned long mActualTime = millis();
       
       // Execute Action if isn't executing and is in range
-      if (!mIsRunning && m < mLength) {
-        mSequence.executeStep(mControlAction, m);
-        mIsRunning = !mIsRunning; 
-        mLastTime = mActualTime;    
+      if (!Seq::movActive && m < Seq::movLen) {
+        MovSeq.executeStep(mControlAction, m);
+        Seq::movActive = !Seq::movActive; 
+        Time::movLast = mActualTime;    
       }
 
-      // Increase sequence value if is angle and rotated
-      if (isAngle && rotated) {
+      // Increase sequence value if is angle and Angle::rotated
+      if (Angle::isAngle && Angle::rotated) {
         m++;
       }
 
       // If isn't angle and is executing, wait untill defined time and stop robot
-      if (!isAngle && mIsRunning && (mActualTime - mLastTime >= mTime)) {
+      if (!Angle::isAngle && Seq::movActive && (mActualTime - Time::movLast >= Time::mov)) {
         Move.robotStop();
         Serial.println("●");
-        mIsRunning = !mIsRunning;
+        Seq::movActive = !Seq::movActive;
         m++;  
       }
     }
 
     // Only execute if electromagnet is defined and isn't empty
-    if (eSeq && eLength != 0) {
+    if (Seq::emg && Seq::emgLen != 0) {
       // Electromagnet Actual Time
       unsigned long eActualTime = millis();
 
       // Execute Action if isn't executing and is in range
-      if (!eIsRunning && e < eLength) {
-        eSequence.executeStep(eControlAction, e);
-        eIsRunning = !eIsRunning;
-        eLastTime = eActualTime;
+      if (!Seq::emgActive && e < Seq::emgLen) {
+        EmgSeq.executeStep(eControlAction, e);
+        Seq::emgActive = !Seq::emgActive;
+        Time::emgLast = eActualTime;
       }
       
       // If is executing, wait untill defined time and deactivate electromagnet
-      if (eIsRunning && (eActualTime - eLastTime >= eTime)) {
+      if (Seq::emgActive && (eActualTime - Time::emgLast >= Time::emg)) {
         Serial.println("OFF");
         Electromagnet.deactivate();
-        eIsRunning = !eIsRunning;
+        Seq::emgActive = !Seq::emgActive;
         e++;
       }
     }
@@ -629,7 +684,8 @@ void executeSequence() {
     switchInterrupt(); 
 
     // Break statements, including interrupts
-    if (max(m,e) == sLength && !eIsRunning && !mIsRunning || bluetoothInterrupt() || mSeq && SW[0] && crashInterrupt(minDistance) && var[2] != 2) {
+    if (max(m,e) == Seq::seqLen && !Seq::emgActive && !Seq::movActive || bluetoothInterrupt() 
+        || Seq::mov && SW[0] && crashInterrupt(Ultrasonic::minDistF) && Bluetooth::var[2] != 2) {
       break;
     }
   }
@@ -637,10 +693,10 @@ void executeSequence() {
   Serial.println("Finished Sequence!");
 
   // Reset States
-  clear = true;
-  execute = false;
-  mIsRunning = false;
-  eIsRunning = false;
+  Seq::clr = true;
+  Seq::exe = false;
+  Seq::movActive = false;
+  Seq::emgActive = false;
 
   // Stop Robot
   Move.robotStop();
@@ -649,8 +705,8 @@ void executeSequence() {
   Electromagnet.deactivate();
 }
 
-// Rotate Function
-void rotate(int desiredAngle, int minError, int DutyCycleA, int DutyCycleB) {
+// Function to rotate a desired angle, with error 
+void rotate(int desiredAngle, int minError) {
   // Update Gyroscope
   Gyro.update();
 
@@ -658,7 +714,7 @@ void rotate(int desiredAngle, int minError, int DutyCycleA, int DutyCycleB) {
   int initialAngle = round(Gyro.AngleZ());
 
   // Initialize rotation
-  rotated = false;
+  Angle::rotated = false;
     
   //while (constrainAngle(initialAngle + desiredAngle) >  constrainAngle(round(Gyro.AngleZ())) - minError) {
   while ((initialAngle + desiredAngle) >  (round(Gyro.AngleZ()) - minError)) {
@@ -667,19 +723,21 @@ void rotate(int desiredAngle, int minError, int DutyCycleA, int DutyCycleB) {
     switchInterrupt();
 
     // Interrupt with front sensor if switch is in the middle position or bluetooth interrupt
-    if (bluetoothInterrupt() || SW[0] && crashInterrupt(minDistance)) {
+    if (bluetoothInterrupt() || SW[0] && crashInterrupt(Ultrasonic::minDistF)) {
       break;
     }
 
     // Rotate robot CCW
     if (desiredAngle > 0) {
-      Move.robotLeft();
       Serial.println("↺");
+      Move.robotLeft();
+      Move.robotPWM(PWM::dClwR,PWM::dClwL);
     } 
     // Rotate robot CW
     else if (desiredAngle < 0) {
-      Move.robotRight();
       Serial.println("↻");
+      Move.robotRight();
+      Move.robotPWM(PWM::dCcwR,PWM::dCcwL); 
     }
     
     // Update Gyroscope
@@ -691,96 +749,85 @@ void rotate(int desiredAngle, int minError, int DutyCycleA, int DutyCycleB) {
     Serial.println("Actual Angle " + String(actualAngle));
     Serial.println("Desired Angle " + String(desiredAngle));
     Serial.println("Initial Angle " + String(initialAngle));
-
-    // Send PWM to motors
-    Move.robotPWM(DutyCycleA, DutyCycleB);  
   }
 
   // Stop the Robot
   Move.robotStop();
-  Serial.println("Parou");
+  Serial.println("●");
   
   // Finish rotation
-  rotated = !rotated; 
+  Angle::rotated = !Angle::rotated; 
 }
 
-// Function to constrain angle between 0 and 360
-int constrainAngle(int angle){
-  if (abs(angle) > 360) {
-    angle = angle % 360;
-  }
-  return abs(angle);
-}
-
-// Bluetooth Callback function
+// Function to verify connection state
 void callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
   if(event == ESP_SPP_SRV_OPEN_EVT) {
-    bluetooth = !bluetooth;
+    Bluetooth::connected = !Bluetooth::connected;
   }
   if(event == ESP_SPP_CLOSE_EVT) {
-    bluetooth = !bluetooth;
-    clear = false;
+    Bluetooth::connected = !Bluetooth::connected;
+    Seq::clr = false;
   }
 }
 
-// Function to receive bluetooth data
+// Function to receive and parse bluetooth serial data
 void receive(char startMarker,char endMarker) {
     static boolean recvInProgress = false;
     static byte ndx = 0;
     char rc;
 
-    while (SerialBT.available() > 0 && newData == false) {
+    while (SerialBT.available() > 0 && Bluetooth::newData == false) {
       rc = SerialBT.read();
         if (recvInProgress) {
             if (rc != endMarker) {
-              rcvdChars[ndx] = rc;
+              Bluetooth::rcvdChars[ndx] = rc;
               ndx++;
-              if (ndx >= numChars){
-                ndx = numChars - 1;
+              if (ndx >= Bluetooth::numChars){
+                ndx = Bluetooth::numChars - 1;
               }
             }
             else {
-              rcvdChars[ndx] = '\0'; 
+              Bluetooth::rcvdChars[ndx] = '\0'; 
               recvInProgress = false;
               ndx = 0;
-              newData = true;
+              Bluetooth::newData = true;
             }
         }
         else if (rc == startMarker) {
           recvInProgress = true;
         }
     }
-    if (newData) {
-      strcpy(tempChars, rcvdChars);
+    if (Bluetooth::newData) {
+      strcpy(Bluetooth::tempChars, Bluetooth::rcvdChars);
   
       char * strtokrow; 
 
-      strtokrow = strtok(tempChars, "/"); 
+      strtokrow = strtok(Bluetooth::tempChars, "/"); 
 
       for (int i = 0; i < 4; i++){
-        var[i] = atoi(strtokrow);
+        Bluetooth::var[i] = atoi(strtokrow);
         strtokrow = strtok(NULL, "/"); 
-        Serial.print(String(var[i]) + " ");
+        Serial.print(String(Bluetooth::var[i]) + " ");
       }
       Serial.println("");
 
-      received = true;           
-      newData = false;          
+      Bluetooth::received = true;           
+      Bluetooth::newData = false;          
     }    
 }
 
-// Bluetooth Interrupt Function
+// Function to verify if bluetooth interrupt was sent
 bool bluetoothInterrupt() {
-  if (bluetooth) {
+  if (Bluetooth::connected) {
     receive('<','>'); 
-    if (received && var[1] == 0) {
+    if (Bluetooth::received && Bluetooth::var[1] == 0) {
       return true;
     }
   }
   return false;
 }
 
-// Switch Interrupt Function
+// Function to verify if switch changed position
 void switchInterrupt() {
   // Read Switch Position
   Switch.position(SW);
@@ -789,27 +836,18 @@ void switchInterrupt() {
   Switch.changed() ? (ESP.restart()) : void();
 }
 
-// Crash Interrupt Function
-bool crashInterrupt(int MinDistance) {
-  //int distance = NewPing::convert_cm(UltrasonicSensor.ping_median(10));
+// Function to verify if robot will crash
+bool crashInterrupt(int minDist) {
   int distance = UltrasonicSensor.ping_cm();
-  return distance > 0 && distance <= MinDistance ? 1 : 0;
+  return distance > 0 && distance <= minDist ? 1 : 0;
 }
 
-// Fall Interrupt Function
-bool fallInterrupt(float MaxPitchAbs, float MaxRollAbs){
-  // Update Gyro 
-  Gyro.update();
-
-  return abs(Gyro.AngleX()) >= MaxPitchAbs || abs(Gyro.AngleY()) >= MaxRollAbs ? 1 : 0;
-}
-
-// Wait Function
+// Function to wait a certain time, with interrupt or not
 void wait(unsigned long time, bool interrupt) {
   unsigned long actualTime = millis();
   while (actualTime + time > millis()) {
     switchInterrupt(); // Switch Interruption
-    if (interrupt && crashInterrupt(minDistance) || bluetoothInterrupt()) {
+    if (interrupt && crashInterrupt(Ultrasonic::minDistF) || bluetoothInterrupt()) {
       break;
     }
   }
