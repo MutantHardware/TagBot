@@ -6,15 +6,9 @@
 #define BIN2 12 // GPIO12
 #define PWMB 13 // GPIO13
 
-// Line Follower Pinout
-#define CLP  05 // GPIO05
-#define NEAR 04 // GPIO04
-#define OUT1 18 // GPIO18
-#define OUT2 19 // GPIO19
-#define OUT3 21 // GPIO21
-#define OUT4 22 // GPIO22
-#define OUT5 23 // GPIO23
- 
+// Servo Motor Pinout
+#define SRV 18 // GPIO18
+
 // Ultrasonic Sensor Pinout
 #define ECHO 16 // GPIO16
 #define TRIG 17 // GPIO17

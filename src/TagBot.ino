@@ -2,20 +2,23 @@
 #include "Move.h"
 #include "Pinout.h"
 #include "Switch.h"
-#include <IRArray.h>
 #include <NewPing.h>
 #include <Arduino.h>
 #include "Sequence.h"
 #include <Gyroscope.h>
+#include <ESP32Servo.h>
 #include "Electromagnet.h"
 #include "BluetoothSerial.h"
+
+// Servo Variables
+int angle = 0;
+
+// Ultrasonic Sensor Variables
+bool US[3] = {false,false,false};
 
 // Rotation variables
 bool isAngle = false;
 bool rotated = false;
-
-// IR sensor variable
-bool* IR = new bool[6];
 
 // Time constants
 const int fTime = 2500; // Forward 
@@ -39,11 +42,27 @@ const int minDistance = 8;
 // PID variables and constants
 int pwm, error;
 
-// PWM constants
+// PWM constants (A -> Right and B -> Left)
 const int minPWM = 200;
 const int maxPWM = 255;
 const int defaultPWMA = 240;
 const int defaultPWMB = 235;
+
+// Forward PWMs
+const int fPWMA = 255;
+const int fPWMB = 255;
+
+// Backward PWMs
+const int bPWMA = 255;
+const int bPWMB = 255;
+
+// Clocwise PWMs
+const int cPWMA = 255;
+const int cPWMB = 255;
+
+// Counterclockwise PWMs
+const int wPWMA = 255;
+const int wPWMB = 255;
 
 // Bluetooth variables and constants
 int var[4];
@@ -70,6 +89,9 @@ bool SW[3] = {false,false,false};
 // Creating Gyro Object
 Gyroscope Gyro;
 
+// Creating Servo Object
+Servo Servo; 
+
 // Creating I2C Object
 TwoWire I2C = TwoWire(0);
 
@@ -94,18 +116,12 @@ NewPing UltrasonicSensor(TRIG,ECHO,50);
 // Creating Move object
 Move Move(AIN1,AIN2,PWMA,BIN1,BIN2,PWMB);
 
-// Creating IRArray Object
-IRArray IRArray({OUT1,OUT2,OUT3,OUT4,OUT5,NEAR},true);
-
 // Default interruption value to wait function 
 void wait(unsigned long time, bool interrupt = false);
 
 void setup() {
   // Stop robot
   Move.robotStop();
-
-  // Set CLP switch as Input
-  pinMode(CLP,INPUT);
 
   // Initializing Serial communication
   Serial.begin(115200);
@@ -128,7 +144,21 @@ void setup() {
   // Calculate Offsets and filter
   Gyro.calcOffsets(true,true); 
   Gyro.setFilterGyroCoef(0.95);
+
+   //Allow allocation of all timers
+  // ESP32PWM::allocateTimer(0);
+  // ESP32PWM::allocateTimer(1);
+  // ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+
+  // Initialize Servo
+  Servo.setPeriodHertz(50);   
+  Servo.attach(SRV, 500, 2400); 
   
+  // Move servo to the middle position
+  Servo.write(90);
+  delay(500);
+
   Serial.println("Finished!");
 }
 
@@ -150,11 +180,12 @@ void loop() {
   else {
     // Choose Mode
     if (SW[0]) {
-      // Obstacle avoidance mode 
+      // Obstacle avoidance without servo 
       obstacleAvoidance();              
     } 
     else if (SW[1]) {
-      
+      // Obstacle avoidance with servo 
+      obstacleAvoidanceServo();
     } 
   }
 
@@ -169,7 +200,87 @@ void loop() {
   }
 }
 
-// Ultrasonic Mode Function
+void obstacleAvoidanceServo() {
+  // Verify middle position crash
+  US[0] = crashInterrupt(minDistance);
+  
+  // If Robot will crash
+  if (US[0]) {
+    // Stop Robot
+    Move.robotStop();
+    Serial.println("R: ●");
+
+    // Move Servo to the right position
+    Servo.write(180);
+    Serial.println("S: →");
+    wait(500,false);
+
+    // Verify right position crash
+    US[1] = crashInterrupt(minDistance);
+
+    // Move Servo to the left position
+    Servo.write(0);
+    Serial.println("S: ←");
+    wait(500,false);
+
+    // Verify left position crash
+    US[2] = crashInterrupt(minDistance);
+
+    // Move Servo to the middle position
+    Servo.write(90);
+    Serial.println("S: ↑"); 
+    wait(500,false);
+ 
+    // Update robot PWM
+    Move.robotPWM(defaultPWMA,defaultPWMB);
+
+    // Detected obstacle in the right and in the left
+    if (US[1] && US[2]) {
+      // Move robot backward
+      Serial.println("R: ↓");
+      Move.robotBackward();
+      
+      wait(1000,false); 
+
+      // Rotate robot clockwise (could be counterclockwise as well)
+      Serial.println("R: ↻");
+      Move.robotRight();
+
+      wait(1000,false);
+    }
+    // Detected obstacle in the right 
+    else if (US[1] && !US[2]) {
+      // Rotate robot counterclockwise
+      Serial.println("R: ↺"); 
+      Move.robotLeft();
+
+      wait(1000,false);
+    }
+    // Detected obstacle in the left
+    else if (!US[1] && US[2]) {
+      // Rotate robot clockwise
+      Serial.println("R: ↻");
+      Move.robotRight();
+
+      wait(1000,false);
+    }
+    else {
+      // Rotate robot clockwise (could be counterclockwise as well)
+      Serial.println("R: ↻");
+      Move.robotRight();
+
+      wait(1000,false);
+    }
+  }
+  else {
+    // Move Robot Forward
+    Move.robotForward();
+    Move.robotPWM(defaultPWMA,defaultPWMB);
+    Serial.println("R: ↑");
+  }
+}
+
+// Ultrasonic Mode Without Servo Function
 void obstacleAvoidance() {
   // Verify crash Interruption
   while (crashInterrupt(minDistance)){
@@ -378,6 +489,9 @@ void mControlAction(int mAction, int mValue) {
       // Move robot forward
       Move.robotForward();
       Serial.println("↑ " + String(mTime));
+
+      // Set robot pwm
+      Move.robotPWM(fPWMA,fPWMB);
       break;
     case 2:    
       // Make sure time != 0
@@ -386,6 +500,9 @@ void mControlAction(int mAction, int mValue) {
       // Move robot backward
       Move.robotBackward();
       Serial.println("↓ " + String(mTime)); 
+
+      // Set robot pwm
+      Move.robotPWM(bPWMA,bPWMB);
       break;
     case 3:
       // Make sure time != 0
@@ -394,6 +511,9 @@ void mControlAction(int mAction, int mValue) {
       // Rotate robot clockwise
       Move.robotRight();
       Serial.println("↻ " + String(mTime)); 
+
+      // Set robot pwm
+      Move.robotPWM(cPWMA,cPWMB);
       break;
     case 4: 
        // Make sure time != 0
@@ -402,6 +522,9 @@ void mControlAction(int mAction, int mValue) {
       // Rotate robot counterclockwise
       Move.robotLeft();
       Serial.println("↺ " + String(mTime)); 
+
+      // Set robot pwm
+      Move.robotPWM(wPWMA,wPWMB);
       break;  
     case 5:
       // Make sure time != 0
@@ -419,10 +542,6 @@ void mControlAction(int mAction, int mValue) {
     default:
       break;
   }
-  
-  // Set robot pwm
-  //Move.robotPWM(defaultPWMA, defaultPWMA);
-  Move.robotPWM(255, 255);
 }
 
 // Function to control electromagnet states
@@ -672,11 +791,9 @@ void switchInterrupt() {
 
 // Crash Interrupt Function
 bool crashInterrupt(int MinDistance) {
-  IRArray.detect(IR);
   //int distance = NewPing::convert_cm(UltrasonicSensor.ping_median(10));
   int distance = UltrasonicSensor.ping_cm();
-  //return distance > 0 && distance <= MinDistance || !IR[5] && isAllSensors || digitalRead(CLP) && isAllSensors ? 1 : 0;
-  return distance > 0 && distance <= MinDistance || digitalRead(CLP) ? 1 : 0;
+  return distance > 0 && distance <= MinDistance ? 1 : 0;
 }
 
 // Fall Interrupt Function
@@ -686,36 +803,6 @@ bool fallInterrupt(float MaxPitchAbs, float MaxRollAbs){
 
   return abs(Gyro.AngleX()) >= MaxPitchAbs || abs(Gyro.AngleY()) >= MaxRollAbs ? 1 : 0;
 }
-
-// bool velocityInterrupt(float minVelocity, int readings, int minTime) {
-//   int ds[readings] = 0;       // Change in distance (sum of distances)
-//   unsigned long dt[readings] = 0; // Change in time
-//   float v = 0;      // Calculated velocity
-
-//   unsigned long lastTime = 0;
-  
-//   for (int i = 0; i < readings; i++) {
-//     unsigned long actualTime = millis();
-//     if (actualTime - lastTime >= minTime) {
-//       dt[i] = UltrasonicSensor.ping_cm();
-//       dt[i] = minTime; 
-//       lastTime = actualTime;
-//     }
-//   }
-  
-//   // Calculate velocity
-//   v = (float)ds / ((float)dt / 1000.0); // Convert dt from milliseconds to seconds
-
-//   Serial.print("ds: ");
-//   Serial.println(ds);
-//   Serial.print("dt: ");
-//   Serial.println(dt);
-//   Serial.print("v: ");
-//   Serial.println(v);
-//   Serial.println("");
-  
-//   return (v < minVelocity);
-// }
 
 // Wait Function
 void wait(unsigned long time, bool interrupt) {
