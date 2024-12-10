@@ -46,7 +46,14 @@ namespace Time {
   // Movements Time
   long mov = 0; // Movement Time
   unsigned long movLast = 0; // Last Movement Time
-  const int dFwd = 2500;  // Default Forward Time
+
+  const int dFwdApp = 2500; // Default Forward App Time
+  const int dBwdApp = 300;  // Default Backward App Time
+  const int dClkApp = 100; // Default Clockwise App Time
+  const int dCcwApp = 100; // Default Counterclockwise App Time
+  const int dStpApp = 100;  // Default Stop App Time
+    
+  const int dFwd = 2500;  // Default Forward Time 
   const int dBwd = 300;  // Default Backward Time
   const int dClk = 1000; // Default Clockwise Time
   const int dCcw = 1000; // Default Counterclockwise Time
@@ -539,7 +546,7 @@ void mControlAction(int mAction, int mValue) {
   switch(mAction) {
     case 1:   
       // Make sure time != 0
-      mValue == 0 ? Time::mov = Time::dFwd : Time::mov = mValue;
+      mValue == 0 ? Time::mov = Time::dFwdApp : Time::mov = mValue;
 
       // Move robot forward
       Move.robotForward();
@@ -550,7 +557,7 @@ void mControlAction(int mAction, int mValue) {
       break;
     case 2:    
       // Make sure time != 0
-      mValue == 0 ? Time::mov = Time::dBwd : Time::mov = mValue;
+      mValue == 0 ? Time::mov = Time::dBwdApp : Time::mov = mValue;
 
       // Move robot backward
       Move.robotBackward();
@@ -561,7 +568,7 @@ void mControlAction(int mAction, int mValue) {
       break;
     case 3:
       // Make sure time != 0
-      mValue == 0 ? Time::mov = Time::dClk : Time::mov = mValue;
+      mValue == 0 ? Time::mov = Time::dClkApp : Time::mov = mValue;
 
       // Rotate robot clockwise
       Move.robotRight();
@@ -572,7 +579,7 @@ void mControlAction(int mAction, int mValue) {
       break;
     case 4: 
        // Make sure time != 0
-      mValue == 0 ? Time::mov = Time::dCcw : Time::mov = mValue;
+      mValue == 0 ? Time::mov = Time::dCcwApp : Time::mov = mValue;
 
       // Rotate robot counterclockwise
       Move.robotLeft();
@@ -583,7 +590,7 @@ void mControlAction(int mAction, int mValue) {
       break;  
     case 5:
       // Make sure time != 0
-      mValue == 0 ? Time::mov = Time::dStp : Time::mov = mValue;
+      mValue == 0 ? Time::mov = Time::dStpApp : Time::mov = mValue;
 
       // Stop robot
       Move.robotStop();
